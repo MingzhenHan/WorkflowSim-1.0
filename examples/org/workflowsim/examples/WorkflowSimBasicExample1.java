@@ -85,7 +85,13 @@ public class WorkflowSimBasicExample1 {
      * Creates main() to run this example This example has only one datacenter
      * and one storage
      */
-    public static void main(String[] args) {
+
+    public static void main(String[] args){
+        double [][] result=mySimulation("Montage_25.xml",1);
+        return;
+    }
+
+    public static double [][] mySimulation(String name,int algorithm) {
         try {
             // First step: Initialize the WorkflowSim package. 
             /**
@@ -97,11 +103,11 @@ public class WorkflowSimBasicExample1 {
             /**
              * Should change this based on real physical path
              */
-            String daxPath = "config/dax/Montage_100.xml";
+            String daxPath = "D:\\projects\\cloudsim_backend\\inputfile\\"+name;
             File daxFile = new File(daxPath);
             if (!daxFile.exists()) {
                 Log.printLine("Warning: Please replace daxPath with the physical path in your working environment!");
-                return;
+                return null;
             }
 
             /**
@@ -109,7 +115,34 @@ public class WorkflowSimBasicExample1 {
              * algorithm should be INVALID such that the planner would not
              * override the result of the scheduler
              */
-            Parameters.SchedulingAlgorithm sch_method = Parameters.SchedulingAlgorithm.MINMIN;
+            Parameters.SchedulingAlgorithm sch_method;
+            switch (algorithm) {
+                case 1:
+                    sch_method = Parameters.SchedulingAlgorithm.MAXMIN;
+                    break;
+                case 2:
+                    sch_method = Parameters.SchedulingAlgorithm.MINMIN;
+                    break;
+                case 3:
+                    sch_method = Parameters.SchedulingAlgorithm.MCT;
+                    break;
+                case 4:
+                    sch_method = Parameters.SchedulingAlgorithm.DATA;
+                    break;
+                case 5:
+                    sch_method = Parameters.SchedulingAlgorithm.STATIC;
+                    break;
+                case 6:
+                    sch_method = Parameters.SchedulingAlgorithm.FCFS;
+                    break;
+                case 7:
+                    sch_method = Parameters.SchedulingAlgorithm.ROUNDROBIN;
+                    break;
+                default:
+                    sch_method = Parameters.SchedulingAlgorithm.INVALID;
+                    break;
+            }
+
             Parameters.PlanningAlgorithm pln_method = Parameters.PlanningAlgorithm.INVALID;
             ReplicaCatalog.FileSystem file_system = ReplicaCatalog.FileSystem.SHARED;
 
@@ -170,10 +203,61 @@ public class WorkflowSimBasicExample1 {
             List<Job> outputList0 = wfEngine.getJobsReceivedList();
             CloudSim.stopSimulation();
             printJobList(outputList0);
+            double [][] result = new double[outputList0.size()][8];
+            storeResult(result,outputList0);
+            return result;
         } catch (Exception e) {
             Log.printLine("The simulation has been terminated due to an unexpected error");
         }
+        return null;
     }
+
+    protected static void storeResult(double [][] result,List<Job> list){
+        String indent = "    ";
+        DecimalFormat dft = new DecimalFormat("###.##");
+        int i=0;
+        for (Job job : list) {
+            int j=0;
+            result[i][j++]=job.getCloudletId();
+            if (job.getClassType() == ClassType.STAGE_IN.value) {
+                result[i][j++]=-1;
+//                Log.print("Stage-in");
+            }
+            for (Task task : job.getTaskList()) {
+                result[i][j++]=task.getCloudletId();
+//                Log.print(task.getCloudletId() + ",");
+            }
+//            Log.print(indent);
+
+            if (job.getCloudletStatus() == Cloudlet.SUCCESS) {
+//                Log.print("SUCCESS");
+                result[i][j++]=job.getResourceId();
+                result[i][j++]=job.getVmId();
+                result[i][j++]=Double.parseDouble(dft.format(job.getActualCPUTime()));
+                result[i][j++]=Double.parseDouble(dft.format(job.getExecStartTime()));
+                result[i][j++]=Double.parseDouble(dft.format(job.getFinishTime()));
+                result[i][j++]=job.getDepth();
+//                Log.printLine(indent + indent + job.getResourceId() + indent + indent + indent + job.getVmId()
+//                        + indent + indent + indent + dft.format(job.getActualCPUTime())
+//                        + indent + indent + dft.format(job.getExecStartTime()) + indent + indent + indent
+//                        + dft.format(job.getFinishTime()) + indent + indent + indent + job.getDepth());
+            } else if (job.getCloudletStatus() == Cloudlet.FAILED) {
+                Log.print("FAILED");
+                result[i][j++]=job.getResourceId();
+                result[i][j++]=job.getVmId();
+                result[i][j++]=Double.parseDouble(dft.format(job.getActualCPUTime()));
+                result[i][j++]=Double.parseDouble(dft.format(job.getExecStartTime()));
+                result[i][j++]=Double.parseDouble(dft.format(job.getFinishTime()));
+                result[i][j++]=job.getDepth();
+                Log.printLine(indent + indent + job.getResourceId() + indent + indent + indent + job.getVmId()
+                        + indent + indent + indent + dft.format(job.getActualCPUTime())
+                        + indent + indent + dft.format(job.getExecStartTime()) + indent + indent + indent
+                        + dft.format(job.getFinishTime()) + indent + indent + indent + job.getDepth());
+            }
+            i++;
+        }
+    }
+
 
     protected static WorkflowDatacenter createDatacenter(String name) {
 
